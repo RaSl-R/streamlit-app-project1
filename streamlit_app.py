@@ -31,6 +31,12 @@ def list_tables(_conn, schema_name):
 
 @st.cache_data(ttl=3600)
 def load_table(_conn, table_id):
+    if _conn.in_transaction():
+        try:
+            _conn.rollback()
+        except Exception as e:
+            st.error(f"Chyba při rollbacku: {e}")
+            return pd.DataFrame()
     result = _conn.execute(text(f"SELECT * FROM {table_id}"))
     df = pd.DataFrame(result.fetchall(), columns=result.keys())
     return df

@@ -146,7 +146,7 @@ def main():
         with st.expander(expander_label):
             where_clause = st.text_input(
                 "Zadej WHERE podmínku (bez klíčového slova 'WHERE')",
-                placeholder="např. amount > 100 AND status = 'active'",
+                placeholder="např.: amount > 100 AND status = 'active'",
                 key="where_input"
             )
             col_clear_btn, col_filter_btn = st.columns(2)
@@ -230,4 +230,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

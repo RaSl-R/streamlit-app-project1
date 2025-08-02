@@ -1,7 +1,10 @@
 name: DATA_BROWSER
+channels:
+  - snowflake
 dependencies:
   - numpy=2.2.4
   - pandas=2.2.3
   - python=3.11.*
+  - snowflake-snowpark-python=
   - sqlparse=0.5.2
   - streamlit=

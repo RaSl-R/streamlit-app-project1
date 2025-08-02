@@ -46,15 +46,20 @@ def load_table_filtered(conn, table_id, where=None):
 def replace_table(conn, table_id, df):
     schema_name, table_name = table_id.split('.', 1)
 
-    with conn.begin():  # explicitní transakce
-        conn.execute(text(f'DROP TABLE IF EXISTS {table_id} CASCADE'))
+    try:
+        with conn.begin():  # explicitní transakce
+            conn.execute(text(f'DROP TABLE IF EXISTS {table_id} CASCADE'))
 
-        # Vytvoření nové tabulky podle DataFrame
-        create_sql = pd.io.sql.get_schema(df, table_name, con=conn.engine, schema=schema_name)
-        conn.execute(text(create_sql))
+            # Vytvoření nové tabulky podle DataFrame
+            create_sql = pd.io.sql.get_schema(df, table_name, con=conn.engine, schema=schema_name)
+            conn.execute(text(create_sql))
 
-        # Naplnění tabulky
-        df.to_sql(table_name, conn.engine, schema=schema_name, if_exists='append', index=False, method='multi')
+            # Naplnění tabulky
+            df.to_sql(table_name, conn, schema=schema_name, if_exists='append', index=False, method='multi')
+
+    except Exception as e:
+        conn.rollback()
+        raise
 
 def display_data_editor(df_to_edit, editor_key):
     edited_df = st.data_editor(
@@ -208,5 +213,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

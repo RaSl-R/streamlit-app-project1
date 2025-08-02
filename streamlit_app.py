@@ -27,7 +27,7 @@ def list_tables(_conn, schema_name):
         SELECT table_name FROM information_schema.tables
         WHERE table_schema = :schema
     """), {"schema": schema_name})
-    return {row[0]: f"{schema_name}.{row[0]}" for row in result]
+    return {row[0]: f"{schema_name}.{row[0]}" for row in result}
 
 @st.cache_data(ttl=3600)
 def load_table(_conn, table_id):
@@ -217,3 +217,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

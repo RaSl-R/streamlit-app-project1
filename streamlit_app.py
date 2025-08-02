@@ -1,7 +1,19 @@
 import streamlit as st
 import pandas as pd
-from snowflake.snowpark import Session, context
 from datetime import datetime
+import os
+from sqlalchemy import create_engine
+
+DB_USER = "neondb_owner"
+DB_PASSWORD = "npg_bqIR6D2UkALc"
+DB_HOST = "ep-icy-moon-a2bfjmyb-pooler.eu-central-1.aws.neon.tech"
+DB_NAME = "neondb"
+
+@st.cache_resource
+def get_connection():
+    conn_str = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    engine = create_engine(conn_str, connect_args={"sslmode": "require"})
+    return engine.connect()
 
 # Inicializace session
 @st.cache_resource
@@ -10,21 +22,25 @@ def get_session():
 
 # Výpis schémat
 @st.cache_data
-def list_schemas(_session):
-    result = _session.sql("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA").collect()
-    return [row['SCHEMA_NAME'] for row in result]
+def list_schemas(conn):
+    result = conn.execute(text("SELECT schema_name FROM information_schema.schemata"))
+    return [row[0] for row in result]
 
 # Výpis tabulek
 @st.cache_data
-def list_tables(_session, schema_name):
-    if not schema_name:
-        return []
-    result = _session.sql(f"""
-        SELECT TABLE_SCHEMA AS TABLE_SCHEMA, TABLE_NAME AS TABLE_NAME, TABLE_SCHEMA || '.' || TABLE_NAME AS TABLE_ID
-        FROM INFORMATION_SCHEMA.TABLES
-        WHERE TABLE_SCHEMA = '{schema_name}'
-    """).collect()
-    return {row['TABLE_NAME']: row['TABLE_ID'] for row in result}
+def list_tables(conn, schema_name):
+    result = conn.execute(text(f"""
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = :schema
+    """), {"schema": schema_name})
+    return {row[0]: f"{schema_name}.{row[0]}" for row in result}
+
+# Načtení dat z tabulky s volitelným filtrem
+@st.cache_data(ttl=3600)
+def load_table(conn, table_id):
+    result = conn.execute(text(f"SELECT * FROM {table_id}"))
+    df = pd.DataFrame(result.fetchall(), columns=result.keys())
+    return df
 
 # Načtení dat z tabulky s volitelným filtrem
 def load_table_filtered(_session, table_id, where=None):
@@ -32,11 +48,6 @@ def load_table_filtered(_session, table_id, where=None):
     if where:
         tbl = tbl.filter(where)
     return tbl.to_pandas()
-
-# Výchozí načtení dat
-@st.cache_data(ttl=3600)
-def load_table(_session, table_id):
-    return _session.table(table_id).to_pandas()
 
 # Přepsání celé tabulky
 def replace_table(session, table_id, df):
@@ -65,7 +76,7 @@ def main():
     st.set_page_config(layout="wide")
     st.title("📊 Data browser")
 
-    session = get_session()
+    conn = get_connection()
 
     # Zpráva (např. COMMIT / ROLLBACK)
     if "message" in st.session_state:

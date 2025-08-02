@@ -17,21 +17,21 @@ def get_connection():
     return engine.connect()
 
 @st.cache_data
-def list_schemas(conn):
-    result = conn.execute(text("SELECT schema_name FROM information_schema.schemata"))
+def list_schemas(_conn):
+    result = _conn.execute(text("SELECT schema_name FROM information_schema.schemata"))
     return [row[0] for row in result]
 
 @st.cache_data
-def list_tables(conn, schema_name):
-    result = conn.execute(text("""
+def list_tables(_conn, schema_name):
+    result = _conn.execute(text("""
         SELECT table_name FROM information_schema.tables
         WHERE table_schema = :schema
     """), {"schema": schema_name})
     return {row[0]: f"{schema_name}.{row[0]}" for row in result}
 
 @st.cache_data(ttl=3600)
-def load_table(conn, table_id):
-    result = conn.execute(text(f"SELECT * FROM {table_id}"))
+def load_table(_conn, table_id):
+    result = _conn.execute(text(f"SELECT * FROM {table_id}"))
     df = pd.DataFrame(result.fetchall(), columns=result.keys())
     return df
 
@@ -206,3 +206,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

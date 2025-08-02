@@ -31,15 +31,21 @@ def list_tables(_conn, schema_name):
 
 @st.cache_data(ttl=3600)
 def load_table(_conn, table_id):
-    if _conn.in_transaction():
-        try:
-            _conn.rollback()
-        except Exception as e:
-            st.error(f"Chyba při rollbacku: {e}")
-            return pd.DataFrame()
-    result = _conn.execute(text(f"SELECT * FROM {table_id}"))
-    df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    return df
+    try:
+        if _conn.in_transaction():
+            try:
+                _conn.rollback()
+            except Exception as e:
+                st.error(f"Chyba při rollbacku: {e}")
+                return pd.DataFrame()
+
+        result = _conn.execute(text(f"SELECT * FROM {table_id}"))
+        df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        return df  # ← musí být tady, ne mimo try
+
+    except Exception as e:
+        st.error(f"Došlo k chybě při práci s databází: {e}")
+        return pd.DataFrame()
 
 def load_table_filtered(conn, table_id, where=None):
     query = f"SELECT * FROM {table_id}"
@@ -68,7 +74,8 @@ def replace_table(conn, table_id, df):
             df.to_sql(table_name, conn, schema=schema_name, if_exists='append', index=False, method='multi')
 
     except Exception as e:
-        conn.rollback()
+        if conn.in_transaction():
+            conn.rollback()
         raise
 
 def display_data_editor(df_to_edit, editor_key):

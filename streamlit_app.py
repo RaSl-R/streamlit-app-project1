@@ -27,7 +27,7 @@ def list_tables(_conn, schema_name):
         SELECT table_name FROM information_schema.tables
         WHERE table_schema = :schema
     """), {"schema": schema_name})
-    return {row[0]: f"{schema_name}.{row[0]}" for row in result}
+    return {row[0]: f"{schema_name}.{row[0]}" for row in result]
 
 @st.cache_data(ttl=3600)
 def load_table(_conn, table_id):
@@ -46,12 +46,16 @@ def load_table_filtered(conn, table_id, where=None):
 def replace_table(conn, table_id, df):
     schema_name, table_name = table_id.split('.', 1)
 
+    # ✅ Pokud běží stará transakce, zahoď ji
+    if conn.in_transaction():
+        conn.rollback()
+
     try:
-        with conn.begin():  # explicitní transakce
+        with conn.begin():  # začni novou transakci
             conn.execute(text(f'DROP TABLE IF EXISTS {table_id} CASCADE'))
 
             # Vytvoření nové tabulky podle DataFrame
-            create_sql = pd.io.sql.get_schema(df, table_name, con=conn.engine, schema=schema_name)
+            create_sql = pd.io.sql.get_schema(df, table_name, con=conn, schema=schema_name)
             conn.execute(text(create_sql))
 
             # Naplnění tabulky

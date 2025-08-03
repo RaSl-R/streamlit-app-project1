@@ -5,12 +5,12 @@ from sqlalchemy import create_engine, text
 from passlib.context import CryptContext
 import os
 
-# Připojení k databázi (Neon nebo jiná PostgreSQL)
-DB_USER = st.secrets["DB_USER"]
-DB_PASSWORD = st.secrets["DB_PASSWORD"]
-DB_HOST = st.secrets["DB_HOST"]
-DB_PORT = st.secrets["DB_PORT"]
-DB_NAME = st.secrets["DB_NAME"]
+# Připojení k databázi (bez st.secrets)
+DB_USER = os.getenv("DB_USER", "neondb_owner")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "npg_xyz")
+DB_HOST = os.getenv("DB_HOST", "ep-abc.eu-central-1.aws.neon.tech")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "main")
 
 engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
